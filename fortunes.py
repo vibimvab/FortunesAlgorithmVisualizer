@@ -338,7 +338,10 @@ class BreakpointNode(BeachlineNode):
         self.parent: Optional[BreakpointNode] = parent      # parent node in the beachline tree, None if it is root
         self.left: BreakpointNode | ArcNode = left          # left child (breakpoint) node in the beachline tree
         self.right: BreakpointNode | ArcNode = right        # right child (breakpoint) node in the beachline tree
-        self.balance: int = balance
+        self.bf: int = balance      # balance factor
+
+    def get_bf(self):
+        return self.bf
 
     def left_site(self) -> SiteEvent:
         return self.ray.left_site
@@ -379,6 +382,10 @@ class ArcNode(BeachlineNode):
 
     def __repr__(self):
         return f"ArcNode(site={self.site.as_tuple()})"
+
+    @staticmethod
+    def get_bf():
+        return 0
 
     def get_prev_arc_at(self, sweep_y) -> Optional[ArcNode]:
         """find the arc on the left when the sweep line is at y=sweep_y"""
@@ -625,7 +632,7 @@ class Beachline:
             ray_list.append(ray_down)
 
             # Step 5: Create breakpoints and hook up child relationships
-            bp = BreakpointNode(ray=ray_down, parent=arc_above.parent, left=left_arc, right=right_arc)
+            bp = BreakpointNode(ray=ray_down, parent=arc_above.parent, left=left_arc, right=right_arc, balance=0)
             left_arc.parent = bp
             right_arc.parent = bp
 
@@ -674,10 +681,10 @@ class Beachline:
         ray_list.append(ray_right)
 
         # Step 5: Create breakpoints and hook up child relationships
-        bp_left = BreakpointNode(ray=ray_left, parent=arc_above.parent, left=left_arc)
+        bp_left = BreakpointNode(ray=ray_left, parent=arc_above.parent, left=left_arc, balance=1)
         if self.root == arc_above:
             self.root = bp_left
-        bp_right = BreakpointNode(ray=ray_right, parent=bp_left, left=center_arc, right=right_arc)
+        bp_right = BreakpointNode(ray=ray_right, parent=bp_left, left=center_arc, right=right_arc, balance=0)
         bp_left.right = bp_right
 
         left_arc.parent = bp_left
@@ -719,6 +726,9 @@ class Beachline:
             raise RuntimeError("Parent does not point to child being replaced")
 
         # todo: rebalance the tree
+        parent_node = bp_left.parent
+        parent_node.bf += 2
+        self._balance(parent_node)
 
         # Step 8: create circle events
         left_left_arc = left_arc.get_last_prev_arc()
@@ -974,6 +984,149 @@ class Beachline:
             print(arc)
             arc = arc.get_next_arc_at(sweep_y)
         print()
+
+
+    # private methods for self-balancing
+    def _balance(self, current: Optional[BreakpointNode]):
+        if not current:
+            return current
+
+        if current.get_bf() == -2:
+            # if the node is left-heavy
+            if current.left.get_bf() == -1 or current.left.get_bf() == 0:
+                # left-left case
+                return self._balance_left(current)
+            elif current.left.get_bf() == 1:
+                # left-right case
+                return self._balance_left_right(current)
+            else:
+                raise ValueError("the beach line tree is not balanced")
+
+        elif current.get_bf() == 2:
+            # if the node is right-heavy
+            if current.right.get_bf() == -1:
+                # right-left case
+                return self._balance_right_left(current)
+            elif current.right.get_bf() == 1 or current.right.get_bf() == 0:
+                # right-right case
+                return self._balance_right(current)
+            else:
+                raise ValueError("the beach line tree is not balanced")
+
+        elif -2 < current.get_bf() < 2:
+            return current
+
+        else:
+            raise ValueError("the beach line tree is not balanced")
+
+
+    def _balance_left(self, current: BreakpointNode):
+        child = current.left
+        assert isinstance(child, BreakpointNode)
+
+        # left-left shift
+        current.left = child.right
+        child.right = current
+
+        # set parent relationships
+        child.parent = current.parent
+        if not child.parent:
+            self.root = child
+        current.parent = child
+
+        current.bf = 0
+        child.bf = 0
+
+    def _balance_left_right(self, current: BreakpointNode):
+        child = current.left
+        grand = child.right
+        assert isinstance(child, BreakpointNode)
+        assert isinstance(grand, BreakpointNode)
+        grand_bf = grand.get_bf()
+
+        # make it left-left
+        child.right = grand.left
+        grand.left = child
+        current.left = grand
+
+        # left-left shift
+        current.left = grand.right
+        grand.right = current
+
+        # set parent relationships
+        grand.parent = current.parent
+        if not grand.parent:
+            self.root = grand
+        current.parent = grand
+        child.parent = grand
+
+        # adjust balance factors
+        grand.bf = 0
+        if grand_bf > 0:
+            current.bf = 0
+            child.bf = -1
+        elif grand_bf < 0:
+            current.bf = 1
+            child.bf = 0
+        else:
+            current.bf = 0
+            child.bf = 0
+
+        return grand
+
+    def _balance_right(self, current: BreakpointNode):
+        child = current.right
+        assert isinstance(child, BreakpointNode)
+
+        # right-right shift
+        current.right = child.left
+        child.left = current
+
+        # set parent relationships
+        child.parent = current.parent
+        if not child.parent:
+            self.root = child
+        current.parent = child
+
+        current.bf = 0
+        child.bf = 0
+
+    def _balance_right_left(self, current: BreakpointNode):
+        child = current.right
+        grand = child.left
+        assert isinstance(child, BreakpointNode)
+        assert isinstance(grand, BreakpointNode)
+        grand_bf = grand.get_bf()
+
+        # make it right-right
+        child.left = grand.right
+        grand.right = child
+        current.right = grand
+
+        # right-right shift
+        current.right = grand.left
+        grand.left = current
+
+        # set parent relationships
+        grand.parent = current.parent
+        if not grand.parent:
+            self.root = grand
+        current.parent = grand
+        child.parent = grand
+
+        # adjust balance factors
+        grand.bf = 0
+        if grand_bf < 0:
+            current.bf = 0
+            child.bf = 1
+        elif grand_bf > 0:
+            current.bf = -1
+            child.bf = 0
+        else:
+            current.bf = 0
+            child.bf = 0
+
+        return grand
 
 
 if __name__ == "__main__":
