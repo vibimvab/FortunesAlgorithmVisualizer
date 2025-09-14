@@ -10,4 +10,13 @@ This project is a program that visualizes Fortune’s algorithm in action. While
 
 In practice, Fortune’s algorithm “jumps” the sweep line from one event to the next, since changes to the beach line only occur at those points. However, for visualization purposes, I implemented a way to smoothly adjust the sweep line and redraw the beach line at intermediate positions. This allows you to actually see the parabolic arcs grow, split, and disappear, rather than just witnessing sudden changes at event locations.
 
-## Space-Time Trade-off
+## Optimization
+One challenge with visualizing Fortune’s algorithm is efficiently reconstructing the beach line at an arbitrary sweep line position. If we start from scratch—only given the positions of the sites—finding the beach line at a sweep line y requires running Fortune’s algorithm from the very top down to y. This takes O(n log n) time in the worst case, since the full algorithm must process all site and circle events up to that point.
+
+To improve this, I designed a method to calculate the beach line at a given sweep line position in O(n) time, while keeping the space complexity at O(n). The key insight is to record how the beach line evolves over time in a compact way, instead of recomputing it from scratch.
+
+I achieve this by storing the changes in the beach line as a **directed acyclic graph (DAG)**. Each node in the graph corresponds to an arc, and an edge between two nodes means that those arcs were neighbors at some point in the algorithm’s execution. Since each event only introduces a constant number of edges (at most 4 for a site event, 1 for a circle event), the total space is bounded by O(n).
+
+When reconstructing the beach line at a sweep line position y, the program traverses this graph in order, guided by binary search, to find which arcs are active. As a result, the reconstruction runs in amortized O(j) time, where j is the number of arcs present in the beach line at that sweep position.
+
+In summary, while the full Fortune’s algorithm runs in O(n log n) time and uses O(n) space, I optimized the visualization process to be more time-efficient. The program can visualize the construction of the Voronoi diagram in **O(n) time** in an **output-sensitive** manner, all while maintaining O(n) space complexity.
