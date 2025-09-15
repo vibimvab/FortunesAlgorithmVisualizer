@@ -274,6 +274,7 @@ class Ray:
                 if y1 == float("inf"):
                     canvas.create_line(x0, y0, x1, 0, fill="black")
                 else:
+                    y0 = max(0.0, y0)
                     canvas.create_line(x0, y0, x1, y1, fill="black")
 
             else:   # Case 3-2: "completed" mode, current_point doesn't work when sweep_y == inf
@@ -458,7 +459,7 @@ class ArcNode(BeachlineNode):
 
         # Degenerate case 1: focus lies on the directrix -> return the midpoint of the focus and x
         if math.isclose(yi, sweep_y, abs_tol=1e-9):
-            return (xi + x) / 2, sweep_y
+            return (xi + x) / 2, float("-inf")
 
         # Degenerate case 2: focus lies below the directrix -> return None
         if yi > sweep_y:
@@ -626,9 +627,7 @@ class Beachline:
             # Step 4: Create new rays (bisectors)
             ray_start = arc_above.find_split_point(new_site.x, sweep_y)
             # the new site is always on the right since the left one is handled first
-            ray_up = Ray(start=ray_start, left_site=arc_above.site, right_site=new_site, start_sweep_y=sweep_y)
             ray_down = Ray(start=ray_start, left_site=new_site, right_site=arc_above.site, start_sweep_y=sweep_y)
-            ray_list.append(ray_up)
             ray_list.append(ray_down)
 
             # Step 5: Create breakpoints and hook up child relationships
@@ -726,9 +725,9 @@ class Beachline:
             raise RuntimeError("Parent does not point to child being replaced")
 
         # todo: rebalance the tree
-        parent_node = bp_left.parent
-        parent_node.bf += 2
-        self._balance(parent_node)
+        # parent_node = bp_left.parent
+        # parent_node.bf += 2
+        # self._balance(parent_node)
 
         # Step 8: create circle events
         left_left_arc = left_arc.get_last_prev_arc()
