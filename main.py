@@ -11,23 +11,23 @@ class VoronoiVisualizer:
     def __init__(self, master):
         self.master = master
         self.mode = "edit"       # "edit" / "view" / "completed"
-        self.sites = []
-        self.sites_added = False
+        self.sites = [(860, 159), (946, 159)]
+        self.sites_added = True
         self.sweep_y = 100
 
         # 버튼 UI
         self.button_frame = tk.Frame(master)
         self.button_frame.pack(side='top', fill='x')
-        self.edit_btn = tk.Button(self.button_frame, text="점 입력 모드", command=self.set_edit_mode)
+        self.edit_btn = tk.Button(self.button_frame, text="Edit Mode", command=self.set_edit_mode)
         self.edit_btn.pack(side='left')
-        self.view_btn = tk.Button(self.button_frame, text="점 추가", command=self.generate_points)
+        self.view_btn = tk.Button(self.button_frame, text="Add Points", command=self.generate_points)
         self.view_btn.pack(side='left')
-        self.view_btn = tk.Button(self.button_frame, text="초기화", command=self.reset)
+        self.view_btn = tk.Button(self.button_frame, text="Reset", command=self.reset)
         self.view_btn.pack(side='left')
 
-        self.view_btn = tk.Button(self.button_frame, text="시각화 모드", command=self.set_view_mode)
+        self.view_btn = tk.Button(self.button_frame, text="View Mode", command=self.set_view_mode)
         self.view_btn.pack(side='left')
-        self.view_btn = tk.Button(self.button_frame, text="완성본 보기", command=self.show_completed)
+        self.view_btn = tk.Button(self.button_frame, text="See Diagram", command=self.show_completed)
         self.view_btn.pack(side='left')
 
         # 캔버스
