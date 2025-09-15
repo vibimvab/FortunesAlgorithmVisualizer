@@ -11,8 +11,8 @@ class VoronoiVisualizer:
     def __init__(self, master):
         self.master = master
         self.mode = "edit"       # "edit" / "view" / "completed"
-        self.sites = [(860, 159), (946, 159)]
-        self.sites_added = True
+        self.sites = []
+        self.sites_added = False
         self.sweep_y = 100
 
         # 버튼 UI
